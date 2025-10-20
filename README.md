@@ -27,23 +27,7 @@ This n8n workflow automates your entire order confirmation process:
 **Time Saved**: 2-3 hours per day | **Orders Processed**: Unlimited | **Error Rate**: Near zero
 
 ## 🔄 Workflow Architecture
-┌─────────────┐
-│ New Email   │
-│ Trigger     │
-└──────┬──────┘
-│
-▼
-┌─────────────┐
-│ Extract     │
-│ Order Data  │
-└──────┬──────┘
-│
-├────────────┐
-▼            ▼
-┌─────────┐   ┌──────────┐
-│ Google  │   │ Telegram │
-│ Sheets  │   │ Message  │
-└─────────┘   └──────────┘
+![Uploading Porject#1.png…]()
 
 ## 🎯 Key Features
 
