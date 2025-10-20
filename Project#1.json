@@ -1,0 +1,157 @@
+{
+  "name": "E-commerce Order Notification System",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "id": "2",
+      "name": "Email Node",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "mailbox": "INBOX",
+        "downloadAttachments": false,
+        "options": {
+          "criteria": "UNSEEN"
+        }
+      },
+      "credentials": {
+        "imap": "FreshCart Email Credentials"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Data Parser",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        750,
+        300
+      ],
+      "parameters": {
+        "functionCode": "const emailBody = $json[\"text\"] || $json[\"body\"];\n\nconst orderIdMatch = emailBody.match(/Order ID[:\\s]*([A-Z0-9]+)/i);\nconst nameMatch = emailBody.match(/Customer Name[:\\s]*([A-Za-z ]+)/i);\nconst itemsMatch = emailBody.match(/Items[:\\s]*([A-Za-z0-9, ]+)/i);\nconst totalMatch = emailBody.match(/Total Amount[:\\s]*\u20b9?([0-9]+)/i);\n\nreturn [{\n  json: {\n    order_id: orderIdMatch ? orderIdMatch[1].trim() : \"\",\n    customer_name: nameMatch ? nameMatch[1].trim() : \"\",\n    items: itemsMatch ? itemsMatch[1].trim() : \"\",\n    total_amount: totalMatch ? `\u20b9${totalMatch[1].trim()}` : \"\",\n    current_datetime: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Google Sheets Node",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        1000,
+        300
+      ],
+      "parameters": {
+        "operation": "append",
+        "sheetId": "YOUR_GOOGLE_SHEET_ID_HERE",
+        "range": "Orders!A:E",
+        "options": {
+          "valueInputMode": "RAW"
+        },
+        "fields": {
+          "values": [
+            "={{$json[\"order_id\"]}}",
+            "={{$json[\"customer_name\"]}}",
+            "={{$json[\"items\"]}}",
+            "={{$json[\"total_amount\"]}}",
+            "={{$json[\"current_datetime\"]}}"
+          ]
+        }
+      },
+      "credentials": {
+        "googleApi": "FreshCart Google Sheets Credentials"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Telegram Node",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "Hello {{$json[\"customer_name\"]}}, your order (ID: {{$json[\"order_id\"]}}) with items {{$json[\"items\"]}} amounting to {{$json[\"total_amount\"]}} has been received successfully. Thank you for shopping with FreshCart!"
+      },
+      "credentials": {
+        "telegramApi": "FreshCart Telegram Bot Credentials"
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Node": {
+      "main": [
+        [
+          {
+            "node": "Data Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Parser": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Node": {
+      "main": [
+        [
+          {
+            "node": "Telegram Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "data_mapping": {
+    "OrderID": "order_id",
+    "CustomerName": "customer_name",
+    "Items": "items",
+    "TotalAmount": "total_amount",
+    "Timestamp": "current_datetime"
+  },
+  "sample_output": {
+    "OrderID": "FC12345",
+    "CustomerName": "Rahul Sharma",
+    "Items": "Apples, Bananas, Milk",
+    "TotalAmount": "\u20b9750",
+    "Timestamp": "2025-10-15T10:35:00Z",
+    "TelegramMessage": "Hello Rahul Sharma, your order (ID: FC12345) with items Apples, Bananas, Milk amounting to \u20b9750 has been received successfully. Thank you for shopping with FreshCart!"
+  }
+}
